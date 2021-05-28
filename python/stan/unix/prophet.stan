@@ -98,6 +98,10 @@ data {
   int trend_indicator;  // 0 for linear, 1 for logistic, 2 for flat
   vector[K] s_a;        // Indicator of additive features
   vector[K] s_m;        // Indicator of multiplicative features
+  int num_constrained;                             // Number of constrained cofficients
+  int constrained_beta_idx[num_constrained];       // Indices of constrained coefficients
+  int num_unconstrained;                           // Number of unconstrained cofficients
+  int unconstrained_beta_idx[num_unconstrained];   // Indices of unconstrained coefficients
 }
 
 transformed data {
@@ -110,17 +114,21 @@ parameters {
   real m;                   // Trend offset
   vector[S] delta;          // Trend rate adjustments
   real<lower=0> sigma_obs;  // Observation noise
-  vector[K] beta;           // Regressor coefficients
+  vector[num_unconstrained] beta_unconstrained;       // Unconstrained coefficients
+  vector<lower=0>[num_constrained] beta_constrained;  // Constrained coefficients
 }
 
 transformed parameters {
-  vector[T] trend;
-  if (trend_indicator == 0) {
-    trend = linear_trend(k, m, delta, t, A, t_change);
-  } else if (trend_indicator == 1) {
-    trend = logistic_trend(k, m, delta, t, cap, A, t_change, S);
-  } else if (trend_indicator == 2) {
-    trend = flat_trend(m, T);
+  vector[K] beta;
+  if (num_constrained > 0) {
+    for (i in 1:num_constrained) {
+      beta[constrained_beta_idx[i]] = beta_constrained[i];
+    }
+  }
+  if (num_unconstrained > 0) {
+    for (i in 1:num_unconstrained) {
+      beta[unconstrained_beta_idx[i]] = beta_unconstrained[i];
+    }
   }
 }
 
